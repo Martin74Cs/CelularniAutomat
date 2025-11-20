@@ -1,0 +1,5 @@
+{
+  "name": "Simulátor Hry života",
+  "description": "Interaktivní simulátor celulárního automatu (Conway's Game of Life) s možností ukládání a načítání stavů.",
+  "requestFramePermissions": []
+}
