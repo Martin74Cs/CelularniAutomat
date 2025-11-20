@@ -1,7 +1,7 @@
 export const ROWS = 30;
 export const COLS = 30;
 
-// Directions for neighbor checking (N, NE, E, SE, S, SW, W, NW)
+// Směry pro kontrolu sousedů (S, SV, V, JV, J, JZ, Z, SZ)
 const operations = [
   [0, 1],
   [0, -1],
@@ -24,34 +24,36 @@ export const generateEmptyGrid = (): number[][] => {
 export const generateRandomGrid = (): number[][] => {
   const rows = [];
   for (let i = 0; i < ROWS; i++) {
+    // 70% šance na mrtvou buňku, 30% na živou
     rows.push(Array.from(Array(COLS), () => Math.random() > 0.7 ? 1 : 0));
   }
   return rows;
 };
 
 export const computeNextGeneration = (grid: number[][]): number[][] => {
-  // Create a deep copy for the next buffer
+  // Vytvoření hluboké kopie pro další generaci
   const nextGrid = grid.map(arr => [...arr]);
 
   for (let i = 0; i < ROWS; i++) {
     for (let j = 0; j < COLS; j++) {
       let neighbors = 0;
       operations.forEach(([x, y]) => {
-        // Wrap coordinates (Toroidal grid logic)
-        // Adding ROWS/COLS ensures we handle negative indices correctly before modulo
+        // Zabalení souřadnic (Logika nekonečného světa / toroidu)
+        // Přičtení ROWS/COLS zajišťuje správné zpracování záporných indexů před modulo operací.
+        // Pokud buňka "vypadne" vlevo (index -1), objeví se vpravo.
         const newI = (i + x + ROWS) % ROWS;
         const newJ = (j + y + COLS) % COLS;
         
         neighbors += grid[newI][newJ];
       });
 
-      // Rules of Life
+      // Pravidla života
       if (neighbors < 2 || neighbors > 3) {
-        nextGrid[i][j] = 0; // Die (Underpopulation or Overpopulation)
+        nextGrid[i][j] = 0; // Smrt (Podlidnění nebo Přelidnění)
       } else if (grid[i][j] === 0 && neighbors === 3) {
-        nextGrid[i][j] = 1; // Reproduction
+        nextGrid[i][j] = 1; // Reprodukce / Zrození
       }
-      // Otherwise, keep current state (Survival if alive and neighbors 2 or 3)
+      // Jinak zůstává současný stav (Přežití, pokud je živá a má 2 nebo 3 sousedy)
     }
   }
   return nextGrid;

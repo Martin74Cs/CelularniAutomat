@@ -13,7 +13,7 @@ const IntroModal: React.FC<IntroModalProps> = ({ isOpen, onClose }) => {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
       <div className="bg-slate-800 border border-slate-700 rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         
-        {/* Header */}
+        {/* Hlavička okna */}
         <div className="p-6 border-b border-slate-700 flex justify-between items-center bg-slate-900">
           <h2 className="text-2xl font-bold text-emerald-400">Vítejte v Hře života</h2>
           <button 
@@ -24,7 +24,7 @@ const IntroModal: React.FC<IntroModalProps> = ({ isOpen, onClose }) => {
           </button>
         </div>
 
-        {/* Content */}
+        {/* Obsah */}
         <div className="p-6 overflow-y-auto text-slate-300 space-y-6">
           
           <section>
@@ -50,8 +50,9 @@ const IntroModal: React.FC<IntroModalProps> = ({ isOpen, onClose }) => {
             <div className="mt-4 pt-4 border-t border-slate-700/50 flex items-start gap-3">
               <div className="text-purple-400 mt-0.5"><Infinity size={20} /></div>
               <p className="text-sm text-slate-400">
-                <span className="text-purple-400 font-bold">Nekonečný svět:</span> Okraje mřížky jsou propojené. 
-                To, co zmizí vpravo, se objeví vlevo; co zmizí dole, objeví se nahoře.
+                <span className="text-purple-400 font-bold">Svět je propojený dokola:</span> 
+                Herní plocha nemá pevné okraje. To, co vyletí ven vpravo, přiletí zleva. 
+                Stejně tak to funguje i nahoře a dole (tzv. toroidní geometrie).
               </p>
             </div>
           </section>
@@ -74,7 +75,7 @@ const IntroModal: React.FC<IntroModalProps> = ({ isOpen, onClose }) => {
           </section>
         </div>
 
-        {/* Footer */}
+        {/* Patička */}
         <div className="p-6 border-t border-slate-700 bg-slate-900 flex justify-end">
           <button 
             onClick={onClose}

@@ -8,7 +8,8 @@ import {
   Cpu,
   Save,
   FolderOpen,
-  CheckCircle2
+  CheckCircle2,
+  Activity
 } from 'lucide-react';
 import { 
   generateEmptyGrid, 
@@ -19,46 +20,58 @@ import {
 import IntroModal from './components/IntroModal';
 
 const App: React.FC = () => {
-  // State
+  // --- Stav aplikace (State) ---
   const [grid, setGrid] = useState<number[][]>(() => generateEmptyGrid());
   const [running, setRunning] = useState(false);
-  const [speed, setSpeed] = useState(100); // ms per generation
+  const [speed, setSpeed] = useState(100); // rychlost v ms na generaci
   const [generation, setGeneration] = useState(0);
   const [isIntroOpen, setIsIntroOpen] = useState(true);
   const [notification, setNotification] = useState<string | null>(null);
 
-  // Refs
-  const runningRef = useRef(running);
-  runningRef.current = running;
+  // --- Reference (Refs) ---
+  // Ref pro uložení ID časovače, abychom ho mohli bezpečně zrušit při změně rychlosti
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Handlers
-  const runSimulation = useCallback(() => {
-    if (!runningRef.current) {
-      return;
-    }
-
+  // --- Obslužné funkce (Handlers) ---
+  
+  // Funkce pro jeden krok simulace
+  const runStep = useCallback(() => {
     setGrid((g) => computeNextGeneration(g));
     setGeneration((gen) => gen + 1);
+  }, []);
 
-    setTimeout(runSimulation, speed);
-  }, [speed]);
-
-  // Effect to handle start/stop
+  // Efekt pro řízení smyčky simulace
+  // Tento efekt se spustí, když se změní 'running' nebo 'speed'
   useEffect(() => {
     if (running) {
-      runningRef.current = true;
-      runSimulation();
-    } else {
-      runningRef.current = false;
-    }
-  }, [running, runSimulation]);
+      // Definice smyčky
+      const loop = () => {
+        runStep();
+        // Naplánování dalšího kroku s aktuální rychlostí
+        timerRef.current = setTimeout(loop, speed);
+      };
 
-  // Notification helper
+      // Spuštění prvního kroku po uplynutí času 'speed'
+      // (nebo můžeme zavolat loop() hned, ale timeout je plynulejší při změně slideru)
+      timerRef.current = setTimeout(loop, speed);
+    }
+
+    // Cleanup funkce: Zavolá se, když se změní speed/running nebo se komponenta odmontuje.
+    // To zajistí, že starý časovač je vždy zrušen před spuštěním nového.
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, [running, speed, runStep]);
+
+  // Pomocná funkce pro notifikace
   const showNotification = (msg: string) => {
     setNotification(msg);
     setTimeout(() => setNotification(null), 3000);
   };
 
+  // Přepínání stavu buňky kliknutím
   const toggleCell = (i: number, j: number) => {
     const newGrid = [...grid];
     newGrid[i] = [...newGrid[i]];
@@ -66,17 +79,20 @@ const App: React.FC = () => {
     setGrid(newGrid);
   };
 
+  // Náhodné generování mřížky
   const handleRandomize = () => {
     setGrid(generateRandomGrid());
     setGeneration(0);
   };
 
+  // Vyčištění mřížky
   const handleClear = () => {
     setGrid(generateEmptyGrid());
     setRunning(false);
     setGeneration(0);
   };
 
+  // Uložení do LocalStorage
   const handleSave = () => {
     try {
       localStorage.setItem('gol_saved_state', JSON.stringify(grid));
@@ -86,15 +102,16 @@ const App: React.FC = () => {
     }
   };
 
+  // Načtení z LocalStorage
   const handleLoad = () => {
     const saved = localStorage.getItem('gol_saved_state');
     if (saved) {
       try {
         const parsedGrid = JSON.parse(saved);
-        // Basic validation to ensure grid matches dimensions roughly or exists
+        // Základní ověření, zda data vypadají jako pole
         if (Array.isArray(parsedGrid) && parsedGrid.length > 0) {
           setGrid(parsedGrid);
-          setGeneration(0); // Reset generation count on load
+          setGeneration(0); // Reset počítadla generací při načtení
           setRunning(false);
           showNotification("Stav byl načten!");
         } else {
@@ -108,13 +125,22 @@ const App: React.FC = () => {
     }
   };
 
+  // Pomocná funkce pro textový popis rychlosti
+  const getSpeedDescription = (ms: number) => {
+    if (ms >= 800) return "Hlemýždí tempo";
+    if (ms >= 400) return "Pomalá chůze";
+    if (ms >= 150) return "Běh";
+    if (ms >= 50) return "Sprint";
+    return "Rychlost světla";
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 flex flex-col font-sans selection:bg-emerald-500/30">
       
-      {/* Modal */}
+      {/* Modální okno s nápovědou */}
       <IntroModal isOpen={isIntroOpen} onClose={() => setIsIntroOpen(false)} />
 
-      {/* Header */}
+      {/* Hlavička */}
       <header className="bg-slate-900 border-b border-slate-800 p-4 sticky top-0 z-10 shadow-md">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-3">
@@ -139,15 +165,15 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      {/* Main Content */}
+      {/* Hlavní obsah */}
       <main className="flex-grow flex flex-col items-center justify-center p-4 md:p-8">
         
         <div className="flex flex-col lg:flex-row gap-8 items-start w-full max-w-6xl">
           
-          {/* Left Panel: Controls */}
+          {/* Levý panel: Ovládání */}
           <div className="w-full lg:w-1/4 flex flex-col gap-6 order-2 lg:order-1">
             
-            {/* Playback Controls */}
+            {/* Ovládací tlačítka simulace */}
             <div className="bg-slate-900 p-5 rounded-xl border border-slate-800 shadow-xl">
               <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Ovládání</h3>
               
@@ -172,11 +198,12 @@ const App: React.FC = () => {
                 </button>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-xs text-slate-400 flex justify-between">
-                  <span>Rychlost simulace</span>
-                  <span>{speed}ms</span>
+              <div className="space-y-3 border-t border-slate-800 pt-4">
+                <label className="text-xs text-slate-400 flex justify-between items-center">
+                  <span className="flex items-center gap-1"><Activity size={14}/> Rychlost simulace</span>
+                  <span className="font-mono text-emerald-400">{speed}ms</span>
                 </label>
+                
                 <input
                   type="range"
                   min="20"
@@ -186,10 +213,21 @@ const App: React.FC = () => {
                   onChange={(e) => setSpeed(Number(e.target.value))}
                   className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500"
                 />
+
+                {/* Vizuální indikátor rychlosti */}
+                <div className="flex items-center justify-between bg-slate-950/50 p-2 rounded-lg border border-slate-800/50">
+                   <span className="text-xs font-medium text-slate-500">{getSpeedDescription(speed)}</span>
+                   <div className="flex gap-1 h-4 items-end">
+                      <div className="w-1 bg-emerald-500/40 rounded-full animate-pulse" style={{ height: '40%', animationDuration: `${Math.max(100, speed * 1.5)}ms` }}></div>
+                      <div className="w-1 bg-emerald-500 rounded-full animate-pulse" style={{ height: '100%', animationDuration: `${Math.max(100, speed * 1.5)}ms`, animationDelay: '0.1s' }}></div>
+                      <div className="w-1 bg-emerald-500/70 rounded-full animate-pulse" style={{ height: '70%', animationDuration: `${Math.max(100, speed * 1.5)}ms`, animationDelay: '0.2s' }}></div>
+                      <div className="w-1 bg-emerald-500/30 rounded-full animate-pulse" style={{ height: '50%', animationDuration: `${Math.max(100, speed * 1.5)}ms`, animationDelay: '0.3s' }}></div>
+                   </div>
+                </div>
               </div>
             </div>
 
-            {/* Storage Section */}
+            {/* Sekce pro ukládání */}
             <div className="bg-slate-900 p-5 rounded-xl border border-slate-800 shadow-xl relative overflow-hidden">
               <h3 className="text-sm font-semibold text-blue-400 uppercase tracking-wider mb-3 flex items-center gap-2">
                 <Save size={16} />
@@ -224,7 +262,7 @@ const App: React.FC = () => {
             </div>
           </div>
 
-          {/* Right Panel: The Grid */}
+          {/* Pravý panel: Mřížka (Grid) */}
           <div className="w-full lg:w-3/4 flex justify-center order-1 lg:order-2">
             <div 
               className="grid gap-[1px] bg-slate-800 border border-slate-700 shadow-2xl p-1 rounded-lg select-none"
@@ -237,7 +275,7 @@ const App: React.FC = () => {
                   <div
                     key={`${i}-${j}`}
                     onClick={() => toggleCell(i, j)}
-                    // Using inline styles for dimensions to keep it responsive but square
+                    // Používáme inline styly pro rozměry, aby byla mřížka responzivní
                     className={`
                       w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 lg:w-6 lg:h-6 
                       transition-all duration-300 ease-in-out cursor-pointer
